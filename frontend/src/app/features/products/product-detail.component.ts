@@ -67,46 +67,56 @@ type SortOption = 'newest' | 'highest' | 'lowest';
           <!-- Write Review -->
           @if (auth.isLoggedIn()) {
             <section class="review-form-section">
-              <h2>Write a Review</h2>
-              @if (reviewSuccess()) {
-                <app-alert message="Review submitted successfully!" type="success" />
+              @if (userHasReviewed()) {
+                <div class="already-reviewed">
+                  <span class="already-reviewed-icon">✓</span>
+                  <div>
+                    <strong>You've already reviewed this product.</strong>
+                    <p>You can edit or delete your review below.</p>
+                  </div>
+                </div>
+              } @else {
+                <h2>Write a Review</h2>
+                @if (reviewSuccess()) {
+                  <app-alert message="Review submitted successfully!" type="success" />
+                }
+                @if (reviewError()) {
+                  <app-alert [message]="reviewError()!" type="error" />
+                }
+                <form (ngSubmit)="submitReview()" class="review-form">
+                  <div class="form-group">
+                    <label>Your Rating</label>
+                    <app-star-picker [value]="reviewRating()" (valueChange)="reviewRating.set($event)" />
+                  </div>
+                  <div class="form-group">
+                    <label for="rtitle">Review Title</label>
+                    <input
+                      id="rtitle"
+                      type="text"
+                      [value]="reviewTitle()"
+                      (input)="reviewTitle.set($any($event.target).value)"
+                      placeholder="Summarize your experience"
+                      maxlength="100"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="rbody">Review</label>
+                    <textarea
+                      id="rbody"
+                      [value]="reviewBody()"
+                      (input)="reviewBody.set($any($event.target).value)"
+                      placeholder="Share your detailed experience..."
+                      rows="4"
+                      maxlength="2000"
+                    ></textarea>
+                  </div>
+                  <button
+                    type="submit"
+                    class="btn btn-primary"
+                    [disabled]="submitting() || reviewRating() === 0"
+                  >{{ submitting() ? 'Submitting...' : 'Submit Review' }}</button>
+                </form>
               }
-              @if (reviewError()) {
-                <app-alert [message]="reviewError()!" type="error" />
-              }
-              <form (ngSubmit)="submitReview()" class="review-form">
-                <div class="form-group">
-                  <label>Your Rating</label>
-                  <app-star-picker [value]="reviewRating()" (valueChange)="reviewRating.set($event)" />
-                </div>
-                <div class="form-group">
-                  <label for="rtitle">Review Title</label>
-                  <input
-                    id="rtitle"
-                    type="text"
-                    [value]="reviewTitle()"
-                    (input)="reviewTitle.set($any($event.target).value)"
-                    placeholder="Summarize your experience"
-                    maxlength="100"
-                  />
-                </div>
-                <div class="form-group">
-                  <label for="rbody">Review</label>
-                  <textarea
-                    id="rbody"
-                    [value]="reviewBody()"
-                    (input)="reviewBody.set($any($event.target).value)"
-                    placeholder="Share your detailed experience..."
-                    rows="4"
-                    maxlength="2000"
-                  ></textarea>
-                </div>
-                <button
-                  type="submit"
-                  class="btn btn-primary"
-                  [disabled]="submitting() || reviewRating() === 0"
-                >{{ submitting() ? 'Submitting...' : 'Submit Review' }}</button>
-              </form>
             </section>
           }
 
@@ -141,7 +151,7 @@ type SortOption = 'newest' | 'highest' | 'lowest';
                     @if (isOwnReview(review)) {
                       <div class="review-actions">
                         <button class="btn btn-sm btn-ghost" (click)="startEdit(review)">Edit</button>
-                        <button class="btn btn-sm btn-danger" (click)="deleteReview(review.id)">Delete</button>
+                        <button class="btn btn-sm btn-danger" (click)="deleteReview(review.id, true)">Delete</button>
                       </div>
                     }
 
@@ -222,6 +232,10 @@ type SortOption = 'newest' | 'highest' | 'lowest';
     .btn-danger { background: #fee2e2; color: #dc2626; }
     .btn-danger:hover { background: #fecaca; }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .already-reviewed { display: flex; align-items: flex-start; gap: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; }
+    .already-reviewed-icon { font-size: 1.25rem; color: #16a34a; flex-shrink: 0; margin-top: 2px; }
+    .already-reviewed strong { color: #15803d; display: block; margin-bottom: 2px; }
+    .already-reviewed p { color: #4b5563; font-size: 0.875rem; margin: 0; }
   `],
 })
 export class ProductDetailComponent implements OnInit {
@@ -244,6 +258,9 @@ export class ProductDetailComponent implements OnInit {
   protected readonly submitting = signal(false);
   protected readonly reviewSuccess = signal(false);
   protected readonly reviewError = signal<string | null>(null);
+
+  // Whether the current user already has a review for this product
+  protected readonly userHasReviewed = signal(false);
 
   // Edit state
   protected readonly editingId = signal<string | null>(null);
@@ -278,6 +295,10 @@ export class ProductDetailComponent implements OnInit {
       next: (data) => {
         this.reviewsResult.set(data);
         this.loadingReviews.set(false);
+        const email = this.auth.currentUser()?.email;
+        if (email && data.items.some(r => r.email === email)) {
+          this.userHasReviewed.set(true);
+        }
       },
       error: () => this.loadingReviews.set(false),
     });
@@ -295,11 +316,12 @@ export class ProductDetailComponent implements OnInit {
 
     this.reviewsService.createReview(this.productId, {
       rating: this.reviewRating(),
-      title: this.reviewTitle(),
-      body: this.reviewBody(),
+      title: this.reviewTitle() || undefined,
+      body: this.reviewBody() || undefined,
     }).subscribe({
       next: () => {
         this.reviewSuccess.set(true);
+        this.userHasReviewed.set(true);
         this.reviewRating.set(0);
         this.reviewTitle.set('');
         this.reviewBody.set('');
@@ -334,8 +356,8 @@ export class ProductDetailComponent implements OnInit {
   saveEdit(id: string) {
     this.reviewsService.updateReview(id, {
       rating: this.editRating(),
-      title: this.editTitle(),
-      body: this.editBody(),
+      title: this.editTitle() || undefined,
+      body: this.editBody() || undefined,
     }).subscribe({
       next: () => {
         this.editingId.set(null);
@@ -345,10 +367,11 @@ export class ProductDetailComponent implements OnInit {
     });
   }
 
-  deleteReview(id: string) {
+  deleteReview(id: string, own: boolean) {
     if (!confirm('Delete this review?')) return;
     this.reviewsService.deleteReview(id).subscribe({
       next: () => {
+        if (own) this.userHasReviewed.set(false);
         this.loadProduct();
         this.loadReviews(this.currentReviewsPage());
       },

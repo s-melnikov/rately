@@ -7,12 +7,18 @@ export class CreateProductDto {
   @MinLength(2)
   name: string;
 
-  @ApiProperty({ example: 'Industry-leading noise canceling headphones', description: 'Product description' })
+  @ApiProperty({
+    example: 'Industry-leading noise canceling headphones',
+    description: 'Product description',
+  })
   @IsString()
   @MinLength(10)
   description: string;
 
-  @ApiPropertyOptional({ example: 'https://example.com/image.jpg', description: 'Product image URL' })
+  @ApiPropertyOptional({
+    example: 'https://example.com/image.jpg',
+    description: 'Product image URL',
+  })
   @IsOptional()
   @IsUrl()
   imageUrl?: string;

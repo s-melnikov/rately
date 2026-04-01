@@ -32,10 +32,15 @@ export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List reviews for a product with pagination and sorting' })
+  @ApiOperation({
+    summary: 'List reviews for a product with pagination and sorting',
+  })
   @ApiParam({ name: 'productId', description: 'Product UUID' })
   @ApiResponse({ status: 200, description: 'Paginated list of reviews' })
-  findAll(@Param('productId') productId: string, @Query() query: ReviewQueryDto) {
+  findAll(
+    @Param('productId') productId: string,
+    @Query() query: ReviewQueryDto,
+  ) {
     return this.reviewsService.findAll(productId, query);
   }
 

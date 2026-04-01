@@ -15,7 +15,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useFactory: (config: ConfigService): JwtModuleOptions => ({
         secret: config.get<string>('JWT_SECRET'),
         // expiresIn cast needed: @nestjs/jwt expects StringValue (from `ms`) but config returns string
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN', '7d') as unknown as number },
+        signOptions: {
+          expiresIn: config.get<string>(
+            'JWT_EXPIRES_IN',
+            '7d',
+          ) as unknown as number,
+        },
       }),
     }),
   ],

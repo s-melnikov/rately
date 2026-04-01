@@ -74,7 +74,10 @@ export class ProductsService {
     let reviewCount = 0;
 
     if (cached !== null) {
-      const parsed = JSON.parse(cached) as { avg: number | null; count: number };
+      const parsed = JSON.parse(cached) as {
+        avg: number | null;
+        count: number;
+      };
       avgRating = parsed.avg;
       reviewCount = parsed.count;
     } else {

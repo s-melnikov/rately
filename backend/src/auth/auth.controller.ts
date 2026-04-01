@@ -9,7 +9,9 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('login')
-  @ApiOperation({ summary: 'Login with username and email, returns JWT access token' })
+  @ApiOperation({
+    summary: 'Login with username and email, returns JWT access token',
+  })
   @ApiResponse({ status: 201, description: 'Returns JWT access token' })
   @ApiResponse({ status: 400, description: 'Validation error' })
   login(@Body() dto: LoginDto): { accessToken: string } {

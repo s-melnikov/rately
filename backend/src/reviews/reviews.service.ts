@@ -1,4 +1,10 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.module';
@@ -48,13 +54,22 @@ export class ReviewsService {
   }
 
   async create(productId: string, dto: CreateReviewDto, user: JwtPayload) {
-    // Verify product exists before creating review
-    const product = await this.prisma.product.findUnique({ where: { id: productId } });
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+
     if (!product) throw new NotFoundException(`Product ${productId} not found`);
+
+    const existing = await this.prisma.review.findUnique({
+      where: { email_productId: { email: user.email, productId } },
+    });
+    if (existing) throw new ConflictException('You have already reviewed this product');
 
     const review = await this.prisma.review.create({
       data: {
         ...dto,
+        title: dto.title ?? '',
+        body: dto.body ?? '',
         username: user.username,
         email: user.email,
         productId,
@@ -70,9 +85,13 @@ export class ReviewsService {
   async update(id: string, dto: UpdateReviewDto, userEmail: string) {
     const review = await this.prisma.review.findUnique({ where: { id } });
     if (!review) throw new NotFoundException(`Review ${id} not found`);
-    if (review.email !== userEmail) throw new ForbiddenException('You can only edit your own reviews');
+    if (review.email !== userEmail)
+      throw new ForbiddenException('You can only edit your own reviews');
 
-    const updated = await this.prisma.review.update({ where: { id }, data: dto });
+    const updated = await this.prisma.review.update({
+      where: { id },
+      data: dto,
+    });
 
     // Invalidate cached rating if rating changed
     if (dto.rating !== undefined) {
@@ -85,7 +104,8 @@ export class ReviewsService {
   async remove(id: string, userEmail: string): Promise<void> {
     const review = await this.prisma.review.findUnique({ where: { id } });
     if (!review) throw new NotFoundException(`Review ${id} not found`);
-    if (review.email !== userEmail) throw new ForbiddenException('You can only delete your own reviews');
+    if (review.email !== userEmail)
+      throw new ForbiddenException('You can only delete your own reviews');
 
     await this.prisma.review.delete({ where: { id } });
     await this.redis.del(`product:${review.productId}:rating`);

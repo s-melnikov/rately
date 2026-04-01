@@ -3,7 +3,10 @@ import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ProductQueryDto {
-  @ApiPropertyOptional({ example: 'Electronics', description: 'Filter by category' })
+  @ApiPropertyOptional({
+    example: 'Electronics',
+    description: 'Filter by category',
+  })
   @IsOptional()
   @IsString()
   category?: string;
@@ -15,7 +18,11 @@ export class ProductQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ example: 10, default: 10, description: 'Items per page (max 50)' })
+  @ApiPropertyOptional({
+    example: 10,
+    default: 10,
+    description: 'Items per page (max 50)',
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
