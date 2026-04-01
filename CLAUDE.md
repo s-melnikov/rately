@@ -65,8 +65,9 @@ README.md
 npx @nestjs/cli new backend --package-manager npm --skip-git
 cd backend
 npm install @nestjs/jwt @nestjs/passport passport passport-jwt
-npm install @prisma/client ioredis
-npm install -D prisma @types/passport-jwt
+npm install @nestjs/config @nestjs/swagger class-validator class-transformer
+npm install @prisma/client @prisma/adapter-pg pg ioredis dotenv
+npm install -D prisma @types/passport-jwt @types/pg tsx
 npx prisma init
 ```
 
@@ -83,16 +84,25 @@ npm install
 
 ## Phase 2 — Database Schema (Prisma)
 
+**Prisma 7 key changes:**
+- `provider = "prisma-client"` (not `prisma-client-js`)
+- `output` — generated client goes to `src/generated/prisma` (not `node_modules`)
+- No `url` in `datasource` — URL lives in `prisma.config.ts` for CLI, and in the PrismaPg adapter for runtime
+- `PrismaClient` constructor requires `{ adapter }` — direct URL is no longer supported
+
 File: `backend/prisma/schema.prisma`
 
 ```prisma
+// Prisma 7: datasource URL moved to prisma.config.ts (CLI only).
+// PrismaClient at runtime connects via the PrismaPg driver adapter.
+
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Product {
@@ -124,10 +134,38 @@ model Review {
 }
 ```
 
-Run migrations:
+File: `backend/prisma.config.ts` (Prisma 7 — used by CLI only, not imported at runtime):
+
+```typescript
+import 'dotenv/config';
+import { defineConfig } from 'prisma/config';
+
+export default defineConfig({
+  schema: 'prisma/schema.prisma',
+  datasource: {
+    url: process.env['DATABASE_URL'] as string,
+  },
+});
+```
+
+Exclude from NestJS build in `tsconfig.build.json`:
+```json
+{ "exclude": ["node_modules", "test", "dist", "**/*spec.ts", "prisma.config.ts", "prisma/seed.ts"] }
+```
+
+Add to `.gitignore`:
+```
+src/generated/
+```
+
+Generate client (no DB needed):
 ```bash
-npx prisma migrate dev --name init
 npx prisma generate
+```
+
+Apply schema to DB (no migration files):
+```bash
+npx prisma db push
 ```
 
 ---
@@ -145,7 +183,40 @@ JWT_EXPIRES_IN=7d
 PORT=3000
 ```
 
-### 3.2 Auth Module
+### 3.2 PrismaService
+
+**Prisma 7 — composition instead of `extends PrismaClient`** (Prisma 7's client is a factory function, not a plain class):
+
+`src/prisma/prisma.service.ts`:
+```typescript
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../generated/prisma/client';
+
+@Injectable()
+export class PrismaService implements OnModuleInit, OnModuleDestroy {
+  private readonly pool: Pool;
+  private readonly client: PrismaClient;
+
+  // Expose table delegates so call-sites (services) use this.prisma.product.findMany() etc.
+  readonly product: PrismaClient['product'];
+  readonly review: PrismaClient['review'];
+
+  constructor(config: ConfigService) {
+    this.pool = new Pool({ connectionString: config.getOrThrow<string>('DATABASE_URL') });
+    this.client = new PrismaClient({ adapter: new PrismaPg(this.pool) });
+    this.product = this.client.product;
+    this.review = this.client.review;
+  }
+
+  async onModuleInit() { await this.client.$connect(); }
+  async onModuleDestroy() { await this.client.$disconnect(); await this.pool.end(); }
+}
+```
+
+### 3.3 Auth Module
 
 **Purpose**: Accept `{ username, email }`, return signed JWT. No user stored in DB.
 
@@ -364,10 +435,26 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
 `backend/prisma/seed.ts` — seed 10 products across 3-4 categories with realistic names/descriptions.
 
-Add to `package.json`:
+```typescript
+import 'dotenv/config';
+import { Pool } from 'pg';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../src/generated/prisma/client';
+
+const pool = new Pool({ connectionString: process.env['DATABASE_URL'] });
+const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+
+// ... seed data ...
+
+main()
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(async () => { await prisma.$disconnect(); await pool.end(); });
+```
+
+Add to `package.json` (seed config — `prisma.config.ts` doesn't support `seed` key in v7):
 ```json
 "prisma": {
-  "seed": "ts-node prisma/seed.ts"
+  "seed": "tsx prisma/seed.ts"
 }
 ```
 
@@ -487,7 +574,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && npx prisma db seed && node dist/main"
+    command: sh -c "npx prisma db push && npx prisma db seed && node dist/src/main"
 
   frontend:
     build: ./frontend

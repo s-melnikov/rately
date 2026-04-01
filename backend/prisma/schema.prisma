@@ -1,12 +1,13 @@
-// Learn more about this file at https://pris.ly/d/prisma-schema
+// Prisma 7: datasource URL moved to prisma.config.ts (used by CLI only).
+// PrismaClient at runtime connects via the PrismaPg driver adapter.
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model Product {
