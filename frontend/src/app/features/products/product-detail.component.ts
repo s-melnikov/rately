@@ -104,7 +104,7 @@ type SortOption = 'newest' | 'highest' | 'lowest';
                 <button
                   type="submit"
                   class="btn btn-primary"
-                  [disabled]="submitting() || reviewRating() === 0 || reviewTitle().length < 3 || reviewBody().length < 10"
+                  [disabled]="submitting() || reviewRating() === 0"
                 >{{ submitting() ? 'Submitting...' : 'Submit Review' }}</button>
               </form>
             </section>
@@ -323,8 +323,8 @@ export class ProductDetailComponent implements OnInit {
   startEdit(review: Review) {
     this.editingId.set(review.id);
     this.editRating.set(review.rating);
-    this.editTitle.set(review.title);
-    this.editBody.set(review.body);
+    this.editTitle.set(review.title ?? '');
+    this.editBody.set(review.body ?? '');
   }
 
   cancelEdit() {

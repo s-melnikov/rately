@@ -6,8 +6,8 @@ import type { PaginatedResult } from './products.service';
 export interface Review {
   id: string;
   rating: number;
-  title: string;
-  body: string;
+  title: string | null;
+  body: string | null;
   username: string;
   email: string;
   productId: string;
@@ -17,8 +17,8 @@ export interface Review {
 
 export interface CreateReviewDto {
   rating: number;
-  title: string;
-  body: string;
+  title?: string;
+  body?: string;
 }
 
 export interface UpdateReviewDto {
