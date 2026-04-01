@@ -11,6 +11,7 @@ WORKDIR /app
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./
 COPY package*.json ./
 EXPOSE 3000
 # CMD is overridden by docker-compose to run migrations + seed before starting
