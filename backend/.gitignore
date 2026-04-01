@@ -1,6 +1,5 @@
 node_modules
 dist
-src/generated/
 # Keep environment variables out of version control
 .env
 

@@ -15,4 +15,4 @@ COPY --from=builder /app/prisma.config.ts ./
 COPY package*.json ./
 EXPOSE 3000
 # CMD is overridden by docker-compose to run migrations + seed before starting
-CMD ["node", "dist/src/main"]
+CMD ["node", "dist/main"]
