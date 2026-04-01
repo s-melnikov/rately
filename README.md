@@ -76,19 +76,6 @@ This separation enables independent deployments — a frontend change doesn't re
 
 ---
 
-## CI/CD
-
-The GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every push and pull request:
-
-1. **Lint** — ESLint on backend TypeScript; Angular linting on frontend
-2. **Type-check** — `tsc --noEmit` to catch type errors before build
-3. **Test** — Jest unit tests on the backend
-4. **Docker build** — Verifies both `Dockerfile`s build successfully (no deploy step)
-
-On merge to `main`, a separate workflow could push Docker images to a registry and trigger a deployment.
-
----
-
 ## API Endpoints
 
 | Method | Path | Auth | Description |
