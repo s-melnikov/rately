@@ -3,17 +3,7 @@ import { Component } from '@angular/core';
 @Component({
   selector: 'app-loading-spinner',
   standalone: true,
-  template: `<div class="spinner" role="status" aria-label="Loading..."><div class="bounce"></div></div>`,
-  styles: [`
-    .spinner {
-      display: flex; justify-content: center; padding: 32px;
-    }
-    .bounce {
-      width: 40px; height: 40px; border-radius: 50%;
-      border: 3px solid #e5e7eb; border-top-color: #4f46e5;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  `],
+  templateUrl: './loading-spinner.component.html',
+  styleUrl: './loading-spinner.component.scss',
 })
 export class LoadingSpinnerComponent {}

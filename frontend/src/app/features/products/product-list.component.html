@@ -1,0 +1,66 @@
+<div class="page">
+  <header class="page-header">
+    <div class="header-content">
+      <h1 class="brand">Ratify</h1>
+      <nav class="header-nav">
+        @if (auth.isLoggedIn()) {
+          <span class="user-name">{{ auth.currentUser()?.username }}</span>
+          <button class="btn btn-ghost" (click)="auth.logout()">Sign Out</button>
+        } @else {
+          <a routerLink="/login" class="btn btn-primary">Sign In</a>
+        }
+      </nav>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="filters">
+      <h2 class="section-title">Products</h2>
+      <div class="category-tabs">
+        @for (cat of categories; track cat) {
+          <button
+            class="tab"
+            [class.active]="selectedCategory() === cat"
+            (click)="selectCategory(cat)"
+          >{{ cat }}</button>
+        }
+      </div>
+    </div>
+
+    @if (loading()) {
+      <app-loading-spinner />
+    } @else if (error()) {
+      <app-alert [message]="error()!" type="error" />
+    } @else {
+      <div class="product-grid">
+        @for (product of result()?.items ?? []; track product.id) {
+          <a class="product-card" [routerLink]="['/products', product.id]">
+            <div class="card-image">
+              @if (product.imageUrl) {
+                <img [src]="product.imageUrl" [alt]="product.name" loading="lazy" />
+              } @else {
+                <div class="image-placeholder">📦</div>
+              }
+            </div>
+            <div class="card-body">
+              <span class="category-badge">{{ product.category }}</span>
+              <h3 class="card-title">{{ product.name }}</h3>
+              <p class="card-desc">{{ product.description | slice:0:100 }}...</p>
+            </div>
+          </a>
+        }
+        @empty {
+          <p class="empty-state">No products found in this category.</p>
+        }
+      </div>
+
+      @if (result(); as r) {
+        <app-pagination
+          [currentPage]="r.page"
+          [totalPages]="r.totalPages"
+          (pageChange)="loadPage($event)"
+        />
+      }
+    }
+  </main>
+</div>

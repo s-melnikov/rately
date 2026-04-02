@@ -1,0 +1,50 @@
+<div class="login-container">
+  <div class="login-card">
+    <h1 class="login-title">Welcome to Ratify</h1>
+    <p class="login-subtitle">Sign in to write and manage reviews</p>
+
+    @if (error()) {
+      <app-alert [message]="error()!" type="error" />
+    }
+
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm" novalidate>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          [(ngModel)]="username"
+          required
+          minlength="2"
+          placeholder="Enter your username"
+          #usernameInput="ngModel"
+        />
+        @if (usernameInput.invalid && usernameInput.touched) {
+          <span class="field-error">Username must be at least 2 characters</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          [(ngModel)]="email"
+          required
+          email
+          placeholder="Enter your email"
+          #emailInput="ngModel"
+        />
+        @if (emailInput.invalid && emailInput.touched) {
+          <span class="field-error">Please enter a valid email</span>
+        }
+      </div>
+
+      <button type="submit" class="btn btn-primary" [disabled]="loading() || loginForm.invalid">
+        {{ loading() ? 'Signing in...' : 'Sign In' }}
+      </button>
+    </form>
+  </div>
+</div>

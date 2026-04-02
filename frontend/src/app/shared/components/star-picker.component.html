@@ -1,0 +1,13 @@
+<span class="star-picker" role="group" aria-label="Pick a rating">
+  @for (star of stars; track star) {
+    <button
+      type="button"
+      class="star"
+      [class.filled]="star <= (hovered() || value())"
+      (mouseenter)="hovered.set(star)"
+      (mouseleave)="hovered.set(0)"
+      (click)="select(star)"
+      [attr.aria-label]="'Rate ' + star + ' stars'"
+    >★</button>
+  }
+</span>

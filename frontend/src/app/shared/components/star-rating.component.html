@@ -1,0 +1,5 @@
+<span class="star-rating" [attr.aria-label]="rating() + ' out of ' + maxStars() + ' stars'">
+  @for (star of stars; track star) {
+    <span class="star" [class.filled]="star <= (rating() ?? 0)">★</span>
+  }
+</span>

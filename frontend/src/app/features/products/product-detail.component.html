@@ -1,0 +1,163 @@
+<div class="page">
+  <header class="page-header">
+    <div class="header-content">
+      <a routerLink="/products" class="brand">← Ratify</a>
+      <nav class="header-nav">
+        @if (auth.isLoggedIn()) {
+          <span class="user-name">{{ auth.currentUser()?.username }}</span>
+          <button class="btn btn-ghost" (click)="auth.logout()">Sign Out</button>
+        } @else {
+          <a routerLink="/login" class="btn btn-primary">Sign In</a>
+        }
+      </nav>
+    </div>
+  </header>
+
+  <main class="content">
+    @if (loadingProduct()) {
+      <app-loading-spinner />
+    } @else if (product(); as p) {
+      <div class="product-header">
+        <div class="product-info">
+          <span class="category-badge">{{ p.category }}</span>
+          <h1 class="product-title">{{ p.name }}</h1>
+          <p class="product-desc">{{ p.description }}</p>
+          <div class="rating-summary">
+            <app-star-rating [rating]="p.avgRating" />
+            <span class="rating-text">
+              @if (p.avgRating) {
+                {{ p.avgRating | number:'1.1-1' }} / 5
+              } @else {
+                No ratings yet
+              }
+            </span>
+            <span class="review-count">({{ p.reviewCount }} {{ p.reviewCount === 1 ? 'review' : 'reviews' }})</span>
+          </div>
+        </div>
+        @if (p.imageUrl) {
+          <img class="product-image" [src]="p.imageUrl" [alt]="p.name" />
+        }
+      </div>
+
+      <!-- Write Review -->
+      @if (auth.isLoggedIn()) {
+        <section class="review-form-section">
+          @if (userHasReviewed()) {
+            <div class="already-reviewed">
+              <span class="already-reviewed-icon">✓</span>
+              <div>
+                <strong>You've already reviewed this product.</strong>
+                <p>You can edit or delete your review below.</p>
+              </div>
+            </div>
+          } @else {
+            <h2>Write a Review</h2>
+            @if (reviewSuccess()) {
+              <app-alert message="Review submitted successfully!" type="success" />
+            }
+            @if (reviewError()) {
+              <app-alert [message]="reviewError()!" type="error" />
+            }
+            <form (ngSubmit)="submitReview()" class="review-form">
+              <div class="form-group">
+                <label>Your Rating</label>
+                <app-star-picker [value]="reviewRating()" (valueChange)="reviewRating.set($event)" />
+              </div>
+              <div class="form-group">
+                <label for="rtitle">Review Title</label>
+                <input
+                  id="rtitle"
+                  type="text"
+                  [value]="reviewTitle()"
+                  (input)="reviewTitle.set($any($event.target).value)"
+                  placeholder="Summarize your experience"
+                  maxlength="100"
+                />
+              </div>
+              <div class="form-group">
+                <label for="rbody">Review</label>
+                <textarea
+                  id="rbody"
+                  [value]="reviewBody()"
+                  (input)="reviewBody.set($any($event.target).value)"
+                  placeholder="Share your detailed experience..."
+                  rows="4"
+                  maxlength="2000"
+                ></textarea>
+              </div>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                [disabled]="submitting() || reviewRating() === 0"
+              >{{ submitting() ? 'Submitting...' : 'Submit Review' }}</button>
+            </form>
+          }
+        </section>
+      }
+
+      <!-- Reviews List -->
+      <section class="reviews-section">
+        <div class="reviews-header">
+          <h2>Reviews</h2>
+          <select class="sort-select" [value]="sort()" (change)="changeSort($any($event.target).value)">
+            <option value="newest">Newest First</option>
+            <option value="highest">Highest Rated</option>
+            <option value="lowest">Lowest Rated</option>
+          </select>
+        </div>
+
+        @if (loadingReviews()) {
+          <app-loading-spinner />
+        } @else {
+          <div class="reviews-list">
+            @for (review of reviewsResult()?.items ?? []; track review.id) {
+              <div class="review-card">
+                <div class="review-header">
+                  <div>
+                    <app-star-rating [rating]="review.rating" />
+                    <strong class="review-title">{{ review.title }}</strong>
+                  </div>
+                  <div class="review-meta">
+                    <span class="reviewer">{{ review.username }}</span>
+                    <span class="review-date">{{ review.createdAt | date:'mediumDate' }}</span>
+                  </div>
+                </div>
+                <p class="review-body">{{ review.body }}</p>
+                @if (isOwnReview(review)) {
+                  <div class="review-actions">
+                    <button class="btn btn-sm btn-ghost" (click)="startEdit(review)">Edit</button>
+                    <button class="btn btn-sm btn-danger" (click)="deleteReview(review.id, true)">Delete</button>
+                  </div>
+                }
+
+                <!-- Inline Edit Form -->
+                @if (editingId() === review.id) {
+                  <div class="edit-form">
+                    <app-star-picker [value]="editRating()" (valueChange)="editRating.set($event)" />
+                    <input type="text" [value]="editTitle()" (input)="editTitle.set($any($event.target).value)" placeholder="Title" />
+                    <textarea [value]="editBody()" (input)="editBody.set($any($event.target).value)" rows="3" placeholder="Body"></textarea>
+                    <div class="edit-actions">
+                      <button class="btn btn-sm btn-primary" (click)="saveEdit(review.id)">Save</button>
+                      <button class="btn btn-sm btn-ghost" (click)="cancelEdit()">Cancel</button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+            @empty {
+              <p class="empty-state">No reviews yet. Be the first to review!</p>
+            }
+          </div>
+
+          @if (reviewsResult(); as r) {
+            <app-pagination
+              [currentPage]="r.page"
+              [totalPages]="r.totalPages"
+              (pageChange)="loadReviews($event)"
+            />
+          }
+        }
+      </section>
+    }
+  </main>
+</div>
